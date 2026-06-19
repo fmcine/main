@@ -3,21 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Gemini Pocket Assistant</title>
-    
+    <title>Perplexity Assistant</title>
+
     <!-- 아이폰 전체화면 앱 구동 메타 태그 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="제미나이">
+    <meta name="apple-mobile-web-app-title" content="Perplexity">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
 
     <style>
         :root {
-            --bg-color: #0b0b0e;        /* 다크 모드 배경 */
-            --card-color: #16161a;      /* 입력창 및 답변창 배경 */
-            --text-color: #ffffff;      /* 메인 글씨 */
-            --accent-color: #7f56d9;    /* 제미나이 퍼플 포인트 */
+            --bg-color: #0b0b0e;
+            --card-color: #16161a;
+            --text-color: #ffffff;
+            --accent-color: #20b2aa;
+            --accent-gradient-start: #20b2aa;
+            --accent-gradient-end: #1a8f8a;
             --border-color: #2c2c35;
         }
 
@@ -35,7 +37,7 @@
 
         header {
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             margin-top: 10px;
         }
 
@@ -51,7 +53,7 @@
             font-weight: 700;
             margin: 0;
             letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #a78bfa, #7f56d9);
+            background: linear-gradient(135deg, var(--accent-gradient-start), var(--accent-gradient-end));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -75,9 +77,39 @@
 
         .response-text {
             font-size: 16px;
-            line-height: 1.6;
+            line-height: 1.7;
             color: #e5e7eb;
-            white-space: pre-wrap; /* 줄바꿈 및 공백 유지 */
+            white-space: pre-wrap;
+        }
+
+        .citations {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .citations-title {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .citation-link {
+            display: block;
+            font-size: 13px;
+            color: var(--accent-color);
+            text-decoration: none;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .citation-link:hover {
+            text-decoration: underline;
         }
 
         .placeholder-text {
@@ -112,7 +144,7 @@
         }
 
         button {
-            background-color: var(--accent-color);
+            background: linear-gradient(135deg, var(--accent-gradient-start), var(--accent-gradient-end));
             color: white;
             border: none;
             border-radius: 50px;
@@ -136,6 +168,17 @@
             font-size: 24px;
         }
 
+        .model-badge {
+            display: inline-block;
+            font-size: 11px;
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+            border-radius: 20px;
+            padding: 2px 8px;
+            margin-top: 6px;
+            opacity: 0.8;
+        }
+
         @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 0.9; }
             50% { transform: scale(1.1); opacity: 1; }
@@ -151,79 +194,120 @@
 <body>
 
     <header>
-        <span class="ai-logo">✨</span>
-        <h1>Gemini Assistant</h1>
-        <div class="subtitle">언제나 함께하는 나만의 AI 개인 비서</div>
+        <div class="ai-logo">&#128269;</div>
+        <h1>Perplexity Assistant</h1>
+        <p class="subtitle">실시간 웹 검색 기반 AI 비서</p>
+        <span class="model-badge">sonar-pro</span>
     </header>
 
-    <!-- 대화 출력 화면 -->
     <div class="response-container" id="responseContainer">
-        <div class="placeholder-text" id="placeholder">
-            안녕하세요! 무엇이든 물어보세요.<br>제미나이가 친절히 답변해 드립니다.
-        </div>
+        <p class="placeholder-text" id="placeholder">
+            안녕하세요!&#128075; 무엇이든 물어보세요.<br>
+            Perplexity가 최신 정보로 답변해 드립니다.
+        </p>
         <div class="response-text" id="responseText"></div>
+        <div class="citations" id="citationsContainer" style="display:none;">
+            <div class="citations-title">&#128279; 참고 출처</div>
+            <div id="citationsList"></div>
+        </div>
     </div>
 
-    <!-- 입력 공간 -->
     <div class="input-group">
-        <input type="text" id="promptInput" placeholder="비서에게 메시지 보내기..." onkeypress="handleKeyPress(event)">
-        <button onclick="askGemini()">➔</button>
+        <input
+            type="text"
+            id="promptInput"
+            placeholder="Perplexity에게 메시지 보내기..."
+            onkeypress="handleKeyPress(event)"
+        >
+        <button onclick="askPerplexity()" id="sendBtn">&#10148;</button>
     </div>
 
     <script>
-        // ⚠️ 실제 본인의 Gemini API Key를 아래 큰따옴표 안에 붙여넣으세요!
-        const GEMINI_API_KEY = ""; 
+        // Cloudflare Workers 프록시 URL
+        // 실제 배포 후 본인의 Worker URL로 교체하세요
+        const WORKER_URL = "https://your-worker.your-subdomain.workers.dev";
 
         function handleKeyPress(e) {
             if (e.key === 'Enter') {
-                askGemini();
+                askPerplexity();
             }
         }
 
-        async function askGemini() {
+        async function askPerplexity() {
             const input = document.getElementById('promptInput');
             const container = document.getElementById('responseContainer');
             const responseText = document.getElementById('responseText');
             const placeholder = document.getElementById('placeholder');
+            const citationsContainer = document.getElementById('citationsContainer');
+            const citationsList = document.getElementById('citationsList');
+            const sendBtn = document.getElementById('sendBtn');
             const prompt = input.value.trim();
 
             if (!prompt) return;
 
-            // 기존 플레이스홀더 텍스트 숨기기
-            if (placeholder) {
-                placeholder.style.display = 'none';
-            }
-
-            // 생각 중 화면 표시
-            responseText.innerHTML = `<span style="color: #9ca3af;">제미나이가 답변을 준비하는 중입니다<span class="loading-dots">...</span></span>`;
+            // UI 초기화
+            if (placeholder) placeholder.style.display = 'none';
+            citationsContainer.style.display = 'none';
+            citationsList.innerHTML = '';
+            responseText.innerHTML = '<span style="color: #9ca3af;">Perplexity가 검색 중입니다<span class="loading-dots">...</span></span>';
             input.value = '';
+            sendBtn.disabled = true;
 
             try {
-                // Gemini 2.5 Flash API 호출
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
+                        model: "sonar-pro",
+                        messages: [
+                            {
+                                role: "system",
+                                content: "당신은 사용자 질문에 최신 웹 정보를 바탕으로 정확하고 친절하게 답변하는 AI 비서입니다. 한국어로 답변하세요."
+                            },
+                            {
+                                role: "user",
+                                content: prompt
+                            }
+                        ],
+                        return_citations: true,
+                        return_related_questions: false
                     })
                 });
 
                 const data = await response.json();
-                
-                if (data.candidates && data.candidates[0].content.parts[0].text) {
-                    const reply = data.candidates[0].content.parts[0].text;
-                    responseText.innerText = reply;
-                    // 답변이 생성되면 스크롤을 맨 밑으로 자동 이동
+
+                if (data.choices && data.choices[0].message) {
+                    responseText.innerText = data.choices[0].message.content;
+
+                    // 출처(Citations) 표시
+                    if (data.citations && data.citations.length > 0) {
+                        citationsContainer.style.display = 'block';
+                        data.citations.forEach((url, idx) => {
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.target = '_blank';
+                            link.className = 'citation-link';
+                            link.textContent = `[${idx + 1}] ${url}`;
+                            citationsList.appendChild(link);
+                        });
+                    }
+
                     container.scrollTop = container.scrollHeight;
+                } else if (data.error) {
+                    responseText.innerText = `오류: ${data.error.message || JSON.stringify(data.error)}`;
                 } else {
-                    responseText.innerText = "답변을 생성하지 못했습니다. API 키가 올바른지 확인해 주세요.";
+                    responseText.innerText = '답변을 받지 못했습니다. 잠시 후 다시 시도해 주세요.';
                 }
 
             } catch (error) {
-                console.error("API Call Error:", error);
-                responseText.innerText = "통신 에러가 발생했습니다. 네트워크 연결 상태를 확인해 주세요.";
+                console.error('API Error:', error);
+                responseText.innerText = 'Worker 서버와 연결할 수 없습니다.\nWorker URL이 올바른지 확인해 주세요.';
+            } finally {
+                sendBtn.disabled = false;
+                input.focus();
             }
         }
     </script>
+
 </body>
 </html>
