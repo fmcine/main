@@ -1,6 +1,22 @@
+const CACHE_NAME = 'memo-cache-v1';
+const ASSETS = [
+  'index.html',
+  'manifest.json',
+  'icon.png'
+];
+
 self.addEventListener('install', (e) => {
-  console.log('Service Worker Installed');
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS);
+    })
+  );
 });
+
 self.addEventListener('fetch', (e) => {
-  // 네트워크 요청 가로채기 기본값
+  e.respondWith(
+    caches.match(e.request).then((cachedResponse) => {
+      return cachedResponse || fetch(e.request);
+    })
+  );
 });

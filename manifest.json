@@ -1,6 +1,6 @@
 {
-  "short_name": "내앱",
-  "name": "나의 첫 번째 웹앱",
+  "short_name": "포켓메모",
+  "name": "나의 포켓 메모장",
   "icons": [
     {
       "src": "icon.png",
@@ -9,7 +9,7 @@
     }
   ],
   "start_url": "index.html",
-  "background_color": "#f5f5f7",
+  "background_color": "#f2f2f7",
   "display": "standalone",
-  "theme_color": "#0071e3"
+  "theme_color": "#007aff"
 }

@@ -2,45 +2,200 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>My First App</title>
-    <!-- 아이폰 앱처럼 보이게 만들기 위한 메타 태그 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>My Pocket Memo</title>
+    
+    <!-- 아이폰 전체화면 앱(PWA) 구동을 위한 핵심 메타 태그 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- 아이폰 상단 상태바 영역 색상 (배경과 자연스럽게 매칭) -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="내첫앱">
+    <meta name="apple-mobile-web-app-title" content="포켓메모">
+    <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
+
     <style>
+        :root {
+            --bg-color: #f2f2f7;
+            --card-color: #ffffff;
+            --text-color: #1c1c1e;
+            --accent-color: #007aff;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: calc(env(safe-area-inset-top) + 20px) 20px env(safe-area-inset-bottom);
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f5f5f7;
+            height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
+            box-sizing: border-box;
             user-select: none;
         }
-        h1 { color: #1d1d1f; }
-        .btn {
-            padding: 15px 30px;
-            font-size: 18px;
-            background-color: #0071e3;
+
+        header {
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid #e5e5ea;
+            font-size: 16px;
+            background-color: var(--card-color);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            background-color: var(--accent-color);
             color: white;
             border: none;
             border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:active {
+            opacity: 0.8;
+        }
+
+        .memo-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .memo-item {
+            background-color: var(--card-color);
+            padding: 16px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            animation: slideIn 0.3s ease;
+        }
+
+        .memo-text {
+            font-size: 16px;
+            word-break: break-all;
+        }
+
+        .delete-btn {
+            background-color: #ff3b30;
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: 8px;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
-    <h1>아이폰 앱 테스트</h1>
-    <button class="btn" onclick="alert('정상 동작합니다!')">기능 실행</button>
+
+    <header>
+        <h1>📝 포켓 메모</h1>
+    </header>
+
+    <div class="input-section">
+        <input type="text" id="memoInput" placeholder="할 일이나 메모를 적어보세요..." onkeypress="handleKeyPress(event)">
+        <button onclick="addMemo()">추가</button>
+    </div>
+
+    <div class="memo-list" id="memoList">
+        <!-- 메모 아이템들이 여기에 동적으로 생성됩니다 -->
+    </div>
 
     <script>
-        // PWA 연동을 위한 서비스 워커 등록
+        // 앱이 켜질 때 로컬 데이터베이스(LocalStorage)에서 저장된 메모 불러오기
+        document.addEventListener('DOMContentLoaded', loadMemos);
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                addMemo();
+            }
+        }
+
+        function addMemo() {
+            const input = document.getElementById('memoInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const memos = getMemosFromStorage();
+            memos.push(text);
+            localStorage.setItem('memos', JSON.stringify(memos));
+
+            input.value = '';
+            renderMemos();
+        }
+
+        function deleteMemo(index) {
+            const memos = getMemosFromStorage();
+            memos.splice(index, 1);
+            localStorage.setItem('memos', JSON.stringify(memos));
+            renderMemos();
+        }
+
+        function getMemosFromStorage() {
+            const stored = localStorage.getItem('memos');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        function loadMemos() {
+            renderMemos();
+        }
+
+        function renderMemos() {
+            const list = document.getElementById('memoList');
+            list.innerHTML = '';
+            const memos = getMemosFromStorage();
+
+            memos.forEach((memo, index) => {
+                const item = document.createElement('div');
+                item.className = 'memo-item';
+                item.innerHTML = `
+                    <span class="memo-text">${memo}</span>
+                    <button class="delete-btn" onclick="deleteMemo(${index})">삭제</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // PWA 기술 가동 (서비스 워커 등록)
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('서비스 워커 등록 완료!'))
+                    .catch(err => console.log('등록 실패:', err));
+            });
         }
     </script>
 </body>
