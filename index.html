@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>My Pocket Memo</title>
+    <title>Gemini Pocket Assistant</title>
     
-    <!-- 아이폰 전체화면 앱(PWA) 구동을 위한 핵심 메타 태그 -->
+    <!-- 아이폰 전체화면 앱 구동 메타 태그 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <!-- 아이폰 상단 상태바 영역 색상 (배경과 자연스럽게 매칭) -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="포켓메모">
+    <meta name="apple-mobile-web-app-title" content="제미나이">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
 
     <style>
         :root {
-            --bg-color: #f2f2f7;
-            --card-color: #ffffff;
-            --text-color: #1c1c1e;
-            --accent-color: #007aff;
+            --bg-color: #0b0b0e;        /* 다크 모드 배경 */
+            --card-color: #16161a;      /* 입력창 및 답변창 배경 */
+            --text-color: #ffffff;      /* 메인 글씨 */
+            --accent-color: #7f56d9;    /* 제미나이 퍼플 포인트 */
+            --border-color: #2c2c35;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
@@ -31,171 +31,198 @@
             flex-direction: column;
             height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
             box-sizing: border-box;
-            user-select: none;
         }
 
         header {
-            margin-bottom: 20px;
+            text-align: center;
+            margin-bottom: 25px;
+            margin-top: 10px;
+        }
+
+        .ai-logo {
+            font-size: 40px;
+            margin-bottom: 8px;
+            display: inline-block;
+            animation: pulse 2s infinite ease-in-out;
         }
 
         h1 {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
             margin: 0;
             letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #a78bfa, #7f56d9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .input-section {
+        .subtitle {
+            font-size: 13px;
+            color: #9ca3af;
+            margin-top: 6px;
+        }
+
+        .response-container {
+            flex: 1;
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+        }
+
+        .response-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #e5e7eb;
+            white-space: pre-wrap; /* 줄바꿈 및 공백 유지 */
+        }
+
+        .placeholder-text {
+            color: #6b7280;
+            text-align: center;
+            margin-top: 40px;
+            font-size: 15px;
+        }
+
+        .input-group {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 8px 8px 16px;
+            border-radius: 50px;
+            align-items: center;
         }
 
         input {
             flex: 1;
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: 1px solid #e5e5ea;
+            background: none;
+            border: none;
+            color: white;
             font-size: 16px;
-            background-color: var(--card-color);
             outline: none;
-            -webkit-appearance: none;
+            padding: 8px 0;
         }
 
-        input:focus {
-            border-color: var(--accent-color);
+        input::placeholder {
+            color: #4b5563;
         }
 
         button {
             background-color: var(--accent-color);
             color: white;
             border: none;
-            border-radius: 12px;
-            padding: 12px 20px;
-            font-size: 16px;
-            font-weight: 600;
+            border-radius: 50px;
+            width: 44px;
+            height: 44px;
+            font-size: 18px;
             cursor: pointer;
-            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s ease;
         }
 
         button:active {
-            opacity: 0.8;
+            transform: scale(0.9);
         }
 
-        .memo-list {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        .loading-dots {
+            display: inline-block;
+            animation: blink 1.4s infinite both;
+            font-size: 24px;
         }
 
-        .memo-item {
-            background-color: var(--card-color);
-            padding: 16px;
-            border-radius: 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            animation: slideIn 0.3s ease;
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
         }
 
-        .memo-text {
-            font-size: 16px;
-            word-break: break-all;
-        }
-
-        .delete-btn {
-            background-color: #ff3b30;
-            padding: 6px 12px;
-            font-size: 13px;
-            border-radius: 8px;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes blink {
+            0% { opacity: .2; }
+            20% { opacity: 1; }
+            100% { opacity: .2; }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>📝 포켓 메모</h1>
+        <span class="ai-logo">✨</span>
+        <h1>Gemini Assistant</h1>
+        <div class="subtitle">언제나 함께하는 나만의 AI 개인 비서</div>
     </header>
 
-    <div class="input-section">
-        <input type="text" id="memoInput" placeholder="할 일이나 메모를 적어보세요..." onkeypress="handleKeyPress(event)">
-        <button onclick="addMemo()">추가</button>
+    <!-- 대화 출력 화면 -->
+    <div class="response-container" id="responseContainer">
+        <div class="placeholder-text" id="placeholder">
+            안녕하세요! 무엇이든 물어보세요.<br>제미나이가 친절히 답변해 드립니다.
+        </div>
+        <div class="response-text" id="responseText"></div>
     </div>
 
-    <div class="memo-list" id="memoList">
-        <!-- 메모 아이템들이 여기에 동적으로 생성됩니다 -->
+    <!-- 입력 공간 -->
+    <div class="input-group">
+        <input type="text" id="promptInput" placeholder="비서에게 메시지 보내기..." onkeypress="handleKeyPress(event)">
+        <button onclick="askGemini()">➔</button>
     </div>
 
     <script>
-        // 앱이 켜질 때 로컬 데이터베이스(LocalStorage)에서 저장된 메모 불러오기
-        document.addEventListener('DOMContentLoaded', loadMemos);
+        // ⚠️ 실제 본인의 Gemini API Key를 아래 큰따옴표 안에 붙여넣으세요!
+        const GEMINI_API_KEY = "AQ.Ab8RN6LQvY7_r1-BOvzKKnOc8iQMM25yjTLiO6TYGFLsrXmN1w"; 
 
         function handleKeyPress(e) {
             if (e.key === 'Enter') {
-                addMemo();
+                askGemini();
             }
         }
 
-        function addMemo() {
-            const input = document.getElementById('memoInput');
-            const text = input.value.trim();
-            if (!text) return;
+        async function askGemini() {
+            const input = document.getElementById('promptInput');
+            const container = document.getElementById('responseContainer');
+            const responseText = document.getElementById('responseText');
+            const placeholder = document.getElementById('placeholder');
+            const prompt = input.value.trim();
 
-            const memos = getMemosFromStorage();
-            memos.push(text);
-            localStorage.setItem('memos', JSON.stringify(memos));
+            if (!prompt) return;
 
+            // 기존 플레이스홀더 텍스트 숨기기
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+
+            // 생각 중 화면 표시
+            responseText.innerHTML = `<span style="color: #9ca3af;">제미나이가 답변을 준비하는 중입니다<span class="loading-dots">...</span></span>`;
             input.value = '';
-            renderMemos();
-        }
 
-        function deleteMemo(index) {
-            const memos = getMemosFromStorage();
-            memos.splice(index, 1);
-            localStorage.setItem('memos', JSON.stringify(memos));
-            renderMemos();
-        }
+            try {
+                // Gemini 2.5 Flash API 호출
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
 
-        function getMemosFromStorage() {
-            const stored = localStorage.getItem('memos');
-            return stored ? JSON.parse(stored) : [];
-        }
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    const reply = data.candidates[0].content.parts[0].text;
+                    responseText.innerText = reply;
+                    // 답변이 생성되면 스크롤을 맨 밑으로 자동 이동
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    responseText.innerText = "답변을 생성하지 못했습니다. API 키가 올바른지 확인해 주세요.";
+                }
 
-        function loadMemos() {
-            renderMemos();
-        }
-
-        function renderMemos() {
-            const list = document.getElementById('memoList');
-            list.innerHTML = '';
-            const memos = getMemosFromStorage();
-
-            memos.forEach((memo, index) => {
-                const item = document.createElement('div');
-                item.className = 'memo-item';
-                item.innerHTML = `
-                    <span class="memo-text">${memo}</span>
-                    <button class="delete-btn" onclick="deleteMemo(${index})">삭제</button>
-                `;
-                list.appendChild(item);
-            });
-        }
-
-        // PWA 기술 가동 (서비스 워커 등록)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('서비스 워커 등록 완료!'))
-                    .catch(err => console.log('등록 실패:', err));
-            });
+            } catch (error) {
+                console.error("API Call Error:", error);
+                responseText.innerText = "통신 에러가 발생했습니다. 네트워크 연결 상태를 확인해 주세요.";
+            }
         }
     </script>
 </body>

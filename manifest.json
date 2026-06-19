@@ -1,6 +1,6 @@
 {
-  "short_name": "포켓메모",
-  "name": "나의 포켓 메모장",
+  "short_name": "제미나이",
+  "name": "Gemini Pocket Assistant",
   "icons": [
     {
       "src": "icon.png",
@@ -9,7 +9,7 @@
     }
   ],
   "start_url": "index.html",
-  "background_color": "#f2f2f7",
+  "background_color": "#0b0b0e",
   "display": "standalone",
-  "theme_color": "#007aff"
+  "theme_color": "#7f56d9"
 }
