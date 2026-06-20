@@ -1,0 +1,54 @@
+name: Generate Llama Icon
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/generate-icon.yml'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate icon.png with Node.js canvas
+        run: |
+          npm install canvas
+          node - <<'EOF'
+          const { createCanvas } = require('canvas');
+          const fs = require('fs');
+
+          const size = 512;
+          const canvas = createCanvas(size, size);
+          const ctx = canvas.getContext('2d');
+
+          // Background: Meta blue gradient
+          const grad = ctx.createLinearGradient(0, 0, size, size);
+          grad.addColorStop(0, '#1877F2');
+          grad.addColorStop(1, '#0082FB');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.roundRect(0, 0, size, size, 80);
+          ctx.fill();
+
+          // Draw llama emoji
+          ctx.font = '320px serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('\uD83E\uDD99', size / 2, size / 2 + 20);
+
+          const buf = canvas.toBuffer('image/png');
+          fs.writeFileSync('icon.png', buf);
+          console.log('icon.png generated, size:', buf.length);
+          EOF
+
+      - name: Commit icon.png
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add icon.png
+          git diff --staged --quiet || git commit -m 'chore: regenerate llama icon.png [skip ci]'
+          git push
