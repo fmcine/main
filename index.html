@@ -2,236 +2,195 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Llama Assistant</title>
-
-    <!-- 아이폰 전체화면 앱 구동 메타 태그 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Llama">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
-
     <style>
         :root {
             --bg-color: #0a0c10;
             --card-color: #13161c;
             --text-color: #e8eaf0;
             --accent-color: #0082fb;
-            --accent-warm: #f0a500;
             --border-color: #1e2430;
+            --input-height: 68px;
         }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        * { box-sizing: border-box; }
-
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
+        html {
+            height: -webkit-fill-available;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
+            /* 키보드가 올라오면 body가 쉄어들어 입력창이 키보드 위에 고정됨 */
+            height: 100vh;
+            height: -webkit-fill-available;
             display: flex;
             flex-direction: column;
-            height: 100dvh;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-        }
-
-        .app-wrapper {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            padding: 20px;
             overflow: hidden;
+            padding-top: env(safe-area-inset-top);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
 
+        /* 헤더 */
         header {
             text-align: center;
-            margin-bottom: 16px;
+            padding: 14px 20px 10px;
             flex-shrink: 0;
         }
-
         .ai-logo {
-            font-size: 42px;
-            margin-bottom: 8px;
+            font-size: 36px;
             display: inline-block;
             animation: llama-bob 3s infinite ease-in-out;
         }
-
         h1 {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 700;
-            margin: 0;
             letter-spacing: -0.5px;
             background: linear-gradient(135deg, #4da6ff, #0082fb);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-
-        .subtitle {
-            font-size: 13px;
-            color: #6b7a99;
-            margin-top: 6px;
-        }
-
+        .subtitle { font-size: 12px; color: #6b7a99; margin-top: 4px; }
         .model-badge {
             display: inline-block;
-            font-size: 11px;
+            font-size: 10px;
             color: var(--accent-color);
-            border: 1px solid rgba(0, 130, 251, 0.4);
+            border: 1px solid rgba(0,130,251,0.4);
             border-radius: 20px;
-            padding: 2px 10px;
-            margin-top: 6px;
-            opacity: 0.85;
-            background: rgba(0, 130, 251, 0.08);
+            padding: 2px 8px;
+            margin-top: 4px;
+            background: rgba(0,130,251,0.08);
         }
 
+        /* 응답일: flex:1로 남은 공간 모두 사용, 키보드가 올라오면 body가 줄어들면서 자동 조절 */
         .response-container {
             flex: 1;
+            min-height: 0;
             background-color: var(--card-color);
             border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 20px;
+            border-radius: 18px;
+            padding: 16px;
             overflow-y: auto;
-            margin-bottom: 16px;
-            box-shadow: inset 0 2px 12px rgba(0,0,0,0.6);
             -webkit-overflow-scrolling: touch;
+            margin: 0 12px 8px;
+            box-shadow: inset 0 2px 12px rgba(0,0,0,0.6);
         }
-
         .response-text {
-            font-size: 16px;
-            line-height: 1.75;
+            font-size: 15px;
+            line-height: 1.7;
             color: #c8d0e0;
             white-space: pre-wrap;
         }
-
         .placeholder-text {
             color: #3d4a60;
             text-align: center;
-            margin-top: 40px;
-            font-size: 15px;
+            margin-top: 30px;
+            font-size: 14px;
             line-height: 1.6;
         }
+        .placeholder-text .hint { font-size: 12px; color: #2d3a50; margin-top: 10px; }
 
-        .placeholder-text .hint {
-            font-size: 13px;
-            color: #2d3a50;
-            margin-top: 12px;
-        }
-
+        /* 입력 영역: flex-shrink:0으로 항상 화면 하단에 고정 */
         .input-area {
             flex-shrink: 0;
-            padding-bottom: max(env(safe-area-inset-bottom), 8px);
+            padding: 0 12px;
+            padding-bottom: max(env(safe-area-inset-bottom), 12px);
         }
-
         .input-group {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             background-color: var(--card-color);
             border: 1px solid var(--border-color);
-            padding: 8px 8px 8px 16px;
+            padding: 8px 8px 8px 14px;
             border-radius: 50px;
             align-items: center;
-            transition: border-color 0.2s ease;
+            transition: border-color 0.2s;
         }
-
         .input-group:focus-within {
-            border-color: rgba(0, 130, 251, 0.5);
-            box-shadow: 0 0 0 3px rgba(0, 130, 251, 0.08);
+            border-color: rgba(0,130,251,0.6);
+            box-shadow: 0 0 0 3px rgba(0,130,251,0.1);
         }
-
         input {
             flex: 1;
             background: none;
             border: none;
             color: var(--text-color);
-            font-size: 16px;
+            font-size: 16px; /* 16px 미만이면 iOS에서 자동 줄어들기 발생 */
             outline: none;
-            padding: 8px 0;
+            padding: 6px 0;
         }
-
         input::placeholder { color: #3d4a60; }
-
         button {
             background: linear-gradient(135deg, #1a9aff, #0082fb);
             color: white;
             border: none;
-            border-radius: 50px;
-            width: 44px;
-            height: 44px;
-            font-size: 18px;
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            font-size: 17px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform 0.1s ease, box-shadow 0.2s ease;
-            box-shadow: 0 2px 8px rgba(0, 130, 251, 0.3);
+            box-shadow: 0 2px 8px rgba(0,130,251,0.3);
+            flex-shrink: 0;
         }
-
-        button:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+        button:disabled { opacity: 0.4; }
         button:active:not(:disabled) { transform: scale(0.9); }
 
-        .loading-dots {
-            display: inline-block;
-            animation: blink 1.4s infinite both;
-            font-size: 24px;
-        }
+        .loading-dots { animation: blink 1.4s infinite both; font-size: 22px; }
 
         @keyframes llama-bob {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-5px); }
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
         }
-
         @keyframes blink {
-            0% { opacity: .2; }
-            20% { opacity: 1; }
-            100% { opacity: .2; }
+            0% { opacity:.2; } 20% { opacity:1; } 100% { opacity:.2; }
         }
     </style>
 </head>
 <body>
-    <div class="app-wrapper">
-        <header>
-            <div class="ai-logo">🦙</div>
-            <h1>Llama Assistant</h1>
-            <div class="subtitle">Meta Llama 3.3 · Cloudflare Workers AI</div>
-            <div class="model-badge">llama-3.3-70b</div>
-        </header>
+    <header>
+        <div class="ai-logo">🦙</div>
+        <h1>Llama Assistant</h1>
+        <div class="subtitle">Meta Llama 3.3 · Cloudflare Workers AI</div>
+        <div class="model-badge">llama-3.3-70b</div>
+    </header>
 
-        <div class="response-container" id="responseContainer">
-            <div class="placeholder-text" id="placeholder">
-                안녕하세요! 무엇이든 물어보세요. 🦙<br>
-                <span class="hint">라마가 빠르고 정확하게 답해드립니다.</span>
-            </div>
-            <div class="response-text" id="responseText"></div>
+    <div class="response-container" id="responseContainer">
+        <div class="placeholder-text" id="placeholder">
+            안녕하세요! 무엇이든 물어보세요. 🦙<br>
+            <span class="hint">라마가 빠르고 정확하게 답해드립니다.</span>
         </div>
+        <div class="response-text" id="responseText"></div>
+    </div>
 
-        <div class="input-area" id="inputArea">
-            <div class="input-group">
-                <input type="text" id="promptInput" placeholder="라마에게 메시지 보내기..." onkeypress="handleKeyPress(event)">
-                <button id="sendBtn" onclick="askLlama()">&#10148;</button>
-            </div>
+    <div class="input-area">
+        <div class="input-group">
+            <input
+                type="text"
+                id="promptInput"
+                placeholder="라마에게 메시지 보내기..."
+                onkeypress="handleKeyPress(event)"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+            >
+            <button id="sendBtn" onclick="askLlama()">➤</button>
         </div>
     </div>
 
     <script>
-        // Cloudflare Workers 프록시 URL (API 키는 Worker에서 안전하게 보관)
         const WORKER_URL = "https://perplexity-proxy.fmcine.workers.dev";
-
-        // iOS 키보드 대응: visualViewport API로 입력창이 항상 보이도록
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                const inputArea = document.getElementById('inputArea');
-                const vvHeight = window.visualViewport.height;
-                const vvOffsetTop = window.visualViewport.offsetTop;
-                // 키보드가 올라왔을 때 입력창을 visible viewport 기준으로 배치
-                inputArea.style.transform = `translateY(${vvOffsetTop}px)`;
-                document.querySelector('.app-wrapper').style.height = vvHeight + 'px';
-            });
-        }
 
         function handleKeyPress(e) {
             if (e.key === 'Enter') askLlama();
@@ -248,36 +207,34 @@
             if (!prompt) return;
 
             if (placeholder) placeholder.style.display = 'none';
-            responseText.innerHTML = '<span style="color: #4a6080;">🦙 라마가 답변을 준비하는 중입니다<span class="loading-dots">...</span></span>';
+            responseText.innerHTML = '<span style="color:#4a6080">🦙 라마가 답변을 준비하는 중입니다<span class="loading-dots">...</span></span>';
             input.value = '';
             sendBtn.disabled = true;
 
+            // 키보드 포컬ucs1 유지 상태에서 응답역 진행
             try {
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt })
                 });
-
                 const data = await response.json();
 
                 if (data.result && data.result.response) {
                     responseText.innerText = data.result.response;
-                    container.scrollTop = container.scrollHeight;
-                } else if (data.candidates && data.candidates[0].content.parts[0].text) {
+                } else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                     responseText.innerText = data.candidates[0].content.parts[0].text;
-                    container.scrollTop = container.scrollHeight;
                 } else if (data.error) {
                     responseText.innerText = `오류: ${data.error.message}`;
                 } else {
                     responseText.innerText = '답변을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.';
                 }
-            } catch (error) {
-                console.error('Error:', error);
+                container.scrollTop = container.scrollHeight;
+            } catch (err) {
+                console.error(err);
                 responseText.innerText = '서버와 연결할 수 없습니다.\nWorker URL을 확인해 주세요.';
             } finally {
                 sendBtn.disabled = false;
-                input.focus();
             }
         }
     </script>
