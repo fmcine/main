@@ -22,22 +22,36 @@
             --border-color: #1e2430;
         }
 
+        * { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            margin: 0;
-            padding: calc(env(safe-area-inset-top) + 20px) 20px env(safe-area-inset-bottom);
             display: flex;
             flex-direction: column;
-            height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
-            box-sizing: border-box;
+            height: 100dvh;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        .app-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            padding: 20px;
+            overflow: hidden;
         }
 
         header {
             text-align: center;
-            margin-bottom: 20px;
-            margin-top: 10px;
+            margin-bottom: 16px;
+            flex-shrink: 0;
         }
 
         .ai-logo {
@@ -82,8 +96,9 @@
             border-radius: 20px;
             padding: 20px;
             overflow-y: auto;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             box-shadow: inset 0 2px 12px rgba(0,0,0,0.6);
+            -webkit-overflow-scrolling: touch;
         }
 
         .response-text {
@@ -105,6 +120,11 @@
             font-size: 13px;
             color: #2d3a50;
             margin-top: 12px;
+        }
+
+        .input-area {
+            flex-shrink: 0;
+            padding-bottom: max(env(safe-area-inset-bottom), 8px);
         }
 
         .input-group {
@@ -133,9 +153,7 @@
             padding: 8px 0;
         }
 
-        input::placeholder {
-            color: #3d4a60;
-        }
+        input::placeholder { color: #3d4a60; }
 
         button {
             background: linear-gradient(135deg, #1a9aff, #0082fb);
@@ -153,15 +171,8 @@
             box-shadow: 0 2px 8px rgba(0, 130, 251, 0.3);
         }
 
-        button:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        button:active:not(:disabled) {
-            transform: scale(0.9);
-        }
+        button:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+        button:active:not(:disabled) { transform: scale(0.9); }
 
         .loading-dots {
             display: inline-block;
@@ -182,35 +193,45 @@
     </style>
 </head>
 <body>
+    <div class="app-wrapper">
+        <header>
+            <div class="ai-logo">🦙</div>
+            <h1>Llama Assistant</h1>
+            <div class="subtitle">Meta Llama 3.3 · Cloudflare Workers AI</div>
+            <div class="model-badge">llama-3.3-70b</div>
+        </header>
 
-    <header>
-        <div class="ai-logo">🦙</div>
-        <h1>Llama Assistant</h1>
-        <p class="subtitle">Meta Llama 3.3 · Cloudflare Workers AI</p>
-        <span class="model-badge">llama-3.3-70b</span>
-    </header>
+        <div class="response-container" id="responseContainer">
+            <div class="placeholder-text" id="placeholder">
+                안녕하세요! 무엇이든 물어보세요. 🦙<br>
+                <span class="hint">라마가 빠르고 정확하게 답해드립니다.</span>
+            </div>
+            <div class="response-text" id="responseText"></div>
+        </div>
 
-    <div class="response-container" id="responseContainer">
-        <p class="placeholder-text" id="placeholder">
-            안녕하세요! 무엇이든 물어보세요.<br>
-            <span class="hint">라마가 빠르고 정확하게 답해드립니다.</span>
-        </p>
-        <div class="response-text" id="responseText"></div>
-    </div>
-
-    <div class="input-group">
-        <input
-            type="text"
-            id="promptInput"
-            placeholder="라마에게 메시지 보내기..."
-            onkeypress="handleKeyPress(event)"
-        >
-        <button onclick="askLlama()" id="sendBtn">&#10148;</button>
+        <div class="input-area" id="inputArea">
+            <div class="input-group">
+                <input type="text" id="promptInput" placeholder="라마에게 메시지 보내기..." onkeypress="handleKeyPress(event)">
+                <button id="sendBtn" onclick="askLlama()">&#10148;</button>
+            </div>
+        </div>
     </div>
 
     <script>
         // Cloudflare Workers 프록시 URL (API 키는 Worker에서 안전하게 보관)
         const WORKER_URL = "https://perplexity-proxy.fmcine.workers.dev";
+
+        // iOS 키보드 대응: visualViewport API로 입력창이 항상 보이도록
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                const inputArea = document.getElementById('inputArea');
+                const vvHeight = window.visualViewport.height;
+                const vvOffsetTop = window.visualViewport.offsetTop;
+                // 키보드가 올라왔을 때 입력창을 visible viewport 기준으로 배치
+                inputArea.style.transform = `translateY(${vvOffsetTop}px)`;
+                document.querySelector('.app-wrapper').style.height = vvHeight + 'px';
+            });
+        }
 
         function handleKeyPress(e) {
             if (e.key === 'Enter') askLlama();
@@ -222,8 +243,8 @@
             const responseText = document.getElementById('responseText');
             const placeholder = document.getElementById('placeholder');
             const sendBtn = document.getElementById('sendBtn');
-            const prompt = input.value.trim();
 
+            const prompt = input.value.trim();
             if (!prompt) return;
 
             if (placeholder) placeholder.style.display = 'none';
@@ -240,7 +261,10 @@
 
                 const data = await response.json();
 
-                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                if (data.result && data.result.response) {
+                    responseText.innerText = data.result.response;
+                    container.scrollTop = container.scrollHeight;
+                } else if (data.candidates && data.candidates[0].content.parts[0].text) {
                     responseText.innerText = data.candidates[0].content.parts[0].text;
                     container.scrollTop = container.scrollHeight;
                 } else if (data.error) {
@@ -257,6 +281,5 @@
             }
         }
     </script>
-
 </body>
 </html>
