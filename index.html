@@ -3,19 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-    <title>Llama Assistant</title>
+    <title>Gemini Assistant</title>
+    <meta name="description" content="Google Gemini AI assistant powered by the Gemini API.">
+    <meta property="og:title" content="Gemini Assistant">
+    <meta property="og:description" content="Google Gemini AI assistant powered by the Gemini API.">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Llama">
+    <meta name="apple-mobile-web-app-title" content="Gemini">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
     <style>
         :root {
             --bg-color: #0a0c10;
             --card-color: #13161c;
+            --input-bg: #0e1117;
             --text-color: #e8eaf0;
-            --accent-color: #0082fb;
+            --muted-color: #6b7a99;
+            --accent-color: #7f56d9;
+            --accent-secondary: #4da6ff;
             --border-color: #1e2430;
+            --error-bg: rgba(239, 68, 68, 0.12);
+            --error-border: rgba(239, 68, 68, 0.35);
+            --error-text: #fca5a5;
             --input-height: 68px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,9 +37,143 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            /* 키보드가 올라오면 body가 쉄어들어 입력창이 키보드 위에 고정됨 */
             height: 100vh;
             height: -webkit-fill-available;
+            overflow: hidden;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 로그인 화면 */
+        .login-view {
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 20% 15%, rgba(77, 166, 255, 0.08), transparent 40%),
+                radial-gradient(circle at 80% 85%, rgba(127, 86, 217, 0.1), transparent 45%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: max(env(safe-area-inset-top), 20px) 16px max(env(safe-area-inset-bottom), 20px);
+            overflow-y: auto;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 380px;
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            border-radius: 22px;
+            padding: 32px 24px 28px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 26px;
+        }
+        .login-subtitle {
+            font-size: 13px;
+            color: var(--muted-color);
+            margin-top: 6px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #9aa7c2;
+            margin-bottom: 7px;
+            letter-spacing: 0.2px;
+        }
+        .field-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .login-input {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-color);
+            font-size: 16px;
+            padding: 12px 14px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .login-input.has-toggle {
+            padding-right: 52px;
+        }
+        .login-input:focus {
+            border-color: rgba(127, 86, 217, 0.7);
+            box-shadow: 0 0 0 3px rgba(127, 86, 217, 0.16);
+        }
+        .login-input::placeholder {
+            color: #3d4a60;
+        }
+        .toggle-pw {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            color: var(--muted-color);
+            font-size: 12px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+        }
+        .toggle-pw:hover {
+            color: var(--text-color);
+        }
+        .error-box {
+            display: none;
+            background-color: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-text);
+            font-size: 13px;
+            line-height: 1.45;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+        }
+        .error-box.visible {
+            display: block;
+        }
+        .login-submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #4da6ff, #7f56d9);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 13px 16px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 4px;
+            box-shadow: 0 4px 14px rgba(127, 86, 217, 0.35);
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .login-submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .login-submit-btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+        .footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: #3d4a60;
+            margin-top: 18px;
+        }
+
+        /* 메인 어시스턴트 화면 */
+        .app-view {
+            width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -39,22 +182,41 @@
             padding-right: env(safe-area-inset-right);
         }
 
-        /* 헤더 */
         header {
+            position: relative;
             text-align: center;
             padding: 14px 20px 10px;
             flex-shrink: 0;
         }
+        .logout-btn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #9aa7c2;
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+        }
+        .logout-btn:hover {
+            color: var(--text-color);
+            border-color: rgba(127, 86, 217, 0.5);
+            background: rgba(127, 86, 217, 0.12);
+        }
         .ai-logo {
             font-size: 36px;
             display: inline-block;
-            animation: llama-bob 3s infinite ease-in-out;
+            animation: gemini-float 3s infinite ease-in-out;
         }
         h1 {
             font-size: 22px;
             font-weight: 700;
             letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #4da6ff, #0082fb);
+            background: linear-gradient(135deg, #4da6ff, #7f56d9, #c084fc);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -62,15 +224,14 @@
         .model-badge {
             display: inline-block;
             font-size: 10px;
-            color: var(--accent-color);
-            border: 1px solid rgba(0,130,251,0.4);
+            color: #a78bfa;
+            border: 1px solid rgba(127, 86, 217, 0.45);
             border-radius: 20px;
             padding: 2px 8px;
             margin-top: 4px;
-            background: rgba(0,130,251,0.08);
+            background: rgba(127, 86, 217, 0.12);
         }
 
-        /* 응답일: flex:1로 남은 공간 모두 사용, 키보드가 올라오면 body가 줄어들면서 자동 조절 */
         .response-container {
             flex: 1;
             min-height: 0;
@@ -81,13 +242,14 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             margin: 0 12px 8px;
-            box-shadow: inset 0 2px 12px rgba(0,0,0,0.6);
+            box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.6);
         }
         .response-text {
             font-size: 15px;
             line-height: 1.7;
             color: #c8d0e0;
             white-space: pre-wrap;
+            word-break: break-word;
         }
         .placeholder-text {
             color: #3d4a60;
@@ -98,7 +260,6 @@
         }
         .placeholder-text .hint { font-size: 12px; color: #2d3a50; margin-top: 10px; }
 
-        /* 입력 영역: flex-shrink:0으로 항상 화면 하단에 고정 */
         .input-area {
             flex-shrink: 0;
             padding: 0 12px;
@@ -115,21 +276,21 @@
             transition: border-color 0.2s;
         }
         .input-group:focus-within {
-            border-color: rgba(0,130,251,0.6);
-            box-shadow: 0 0 0 3px rgba(0,130,251,0.1);
+            border-color: rgba(127, 86, 217, 0.65);
+            box-shadow: 0 0 0 3px rgba(127, 86, 217, 0.14);
         }
-        input {
+        .chat-input {
             flex: 1;
             background: none;
             border: none;
             color: var(--text-color);
-            font-size: 16px; /* 16px 미만이면 iOS에서 자동 줄어들기 발생 */
+            font-size: 16px;
             outline: none;
             padding: 6px 0;
         }
-        input::placeholder { color: #3d4a60; }
-        button {
-            background: linear-gradient(135deg, #1a9aff, #0082fb);
+        .chat-input::placeholder { color: #3d4a60; }
+        .send-btn {
+            background: linear-gradient(135deg, #4da6ff, #7f56d9);
             color: white;
             border: none;
             border-radius: 50%;
@@ -140,63 +301,278 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,130,251,0.3);
+            box-shadow: 0 2px 10px rgba(127, 86, 217, 0.35);
             flex-shrink: 0;
         }
-        button:disabled { opacity: 0.4; }
-        button:active:not(:disabled) { transform: scale(0.9); }
+        .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .send-btn:active:not(:disabled) { transform: scale(0.9); }
 
         .loading-dots { animation: blink 1.4s infinite both; font-size: 22px; }
 
-        @keyframes llama-bob {
-            0%,100% { transform: translateY(0); }
+        @keyframes gemini-float {
+            0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-4px); }
         }
         @keyframes blink {
-            0% { opacity:.2; } 20% { opacity:1; } 100% { opacity:.2; }
+            0% { opacity: .2; } 20% { opacity: 1; } 100% { opacity: .2; }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="ai-logo">🦙</div>
-        <h1>Llama Assistant</h1>
-        <div class="subtitle">Meta Llama 3.3 · Cloudflare Workers AI</div>
-        <div class="model-badge">llama-3.3-70b</div>
-    </header>
+    <!-- 로그인 화면 (미인증 시 표시) -->
+    <section id="loginView" class="login-view">
+        <main class="login-card">
+            <div class="login-header">
+                <div class="ai-logo">✨</div>
+                <h1>Gemini Assistant</h1>
+                <p class="login-subtitle">허가된 사용자만 이용할 수 있습니다.</p>
+            </div>
 
-    <div class="response-container" id="responseContainer">
-        <div class="placeholder-text" id="placeholder">
-            안녕하세요! 무엇이든 물어보세요. 🦙<br>
-            <span class="hint">라마가 빠르고 정확하게 답해드립니다.</span>
-        </div>
-        <div class="response-text" id="responseText"></div>
-    </div>
+            <form id="loginForm" onsubmit="handleLogin(event)" novalidate>
+                <div class="error-box" id="errorBox" role="alert"></div>
 
-    <div class="input-area">
-        <div class="input-group">
-            <input
-                type="text"
-                id="promptInput"
-                placeholder="라마에게 메시지 보내기..."
-                onkeypress="handleKeyPress(event)"
-                autocomplete="off"
-                autocorrect="off"
-                autocapitalize="off"
-                spellcheck="false"
-            >
-            <button id="sendBtn" onclick="askLlama()">➤</button>
+                <div class="form-group">
+                    <label class="form-label" for="userId">아이디 (ID)</label>
+                    <div class="field-wrapper">
+                        <input
+                            type="text"
+                            id="userId"
+                            name="id"
+                            class="login-input"
+                            placeholder="아이디를 입력하세요"
+                            autocomplete="username"
+                            autocorrect="off"
+                            autocapitalize="off"
+                            spellcheck="false"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="userPassword">비밀번호 (Password)</label>
+                    <div class="field-wrapper">
+                        <input
+                            type="password"
+                            id="userPassword"
+                            name="password"
+                            class="login-input has-toggle"
+                            placeholder="비밀번호를 입력하세요"
+                            autocomplete="current-password"
+                            required
+                        >
+                        <button type="button" class="toggle-pw" id="togglePwBtn" onclick="togglePassword()" aria-label="비밀번호 표시 전환">보기</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="login-submit-btn" id="loginBtn">로그인</button>
+            </form>
+
+            <p class="footer-note">Private Access · Protected Session</p>
+        </main>
+    </section>
+
+    <!-- Gemini Assistant 화면 (인증 후 표시) -->
+    <section id="appView" class="app-view hidden">
+        <header>
+            <button type="button" class="logout-btn" onclick="handleLogout()">로그아웃</button>
+            <div class="ai-logo">✨</div>
+            <h1>Gemini Assistant</h1>
+            <div class="subtitle">Google Gemini · Pocket AI Assistant</div>
+            <div class="model-badge">gemini-4-hydrogen</div>
+        </header>
+
+        <div class="response-container" id="responseContainer">
+            <div class="placeholder-text" id="placeholder">
+                안녕하세요! 무엇이든 물어보세요. ✨<br>
+                <span class="hint">제미나이가 빠르고 정확하게 답해드립니다.</span>
+            </div>
+            <div class="response-text" id="responseText"></div>
         </div>
-    </div>
+
+        <div class="input-area">
+            <div class="input-group">
+                <input
+                    type="text"
+                    id="promptInput"
+                    class="chat-input"
+                    placeholder="제미나이에게 메시지 보내기..."
+                    onkeydown="handleKeyDown(event)"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                >
+                <button type="button" id="sendBtn" class="send-btn" onclick="askGemini()" aria-label="전송">➤</button>
+            </div>
+        </div>
+    </section>
 
     <script>
-        const WORKER_URL = "https://perplexity-proxy.fmcine.workers.dev";
+        const API_URL = '/api/gemini/generate';
+        const TOKEN_STORAGE_KEY = 'gemini_assistant_token';
+        let authToken = null;
 
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') askLlama();
+        function readStoredToken() {
+            try {
+                return sessionStorage.getItem(TOKEN_STORAGE_KEY) || localStorage.getItem(TOKEN_STORAGE_KEY) || null;
+            } catch {
+                return null;
+            }
         }
 
-        async function askLlama() {
+        function saveStoredToken(token) {
+            authToken = token || null;
+            try {
+                if (token) {
+                    sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+                    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+                } else {
+                    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+                    localStorage.removeItem(TOKEN_STORAGE_KEY);
+                }
+            } catch {
+                // Storage may be restricted in sandboxed iframes; in-memory authToken still works
+            }
+        }
+
+        function getAuthHeaders(extraHeaders = {}) {
+            const headers = { ...extraHeaders };
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+            return headers;
+        }
+
+        function showLoginView() {
+            document.getElementById('appView').classList.add('hidden');
+            document.getElementById('loginView').classList.remove('hidden');
+        }
+
+        function showAppView() {
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('appView').classList.remove('hidden');
+            clearLoginError();
+        }
+
+        function togglePassword() {
+            const pwInput = document.getElementById('userPassword');
+            const toggleBtn = document.getElementById('togglePwBtn');
+            if (pwInput.type === 'password') {
+                pwInput.type = 'text';
+                toggleBtn.textContent = '숨김';
+            } else {
+                pwInput.type = 'password';
+                toggleBtn.textContent = '보기';
+            }
+        }
+
+        function showLoginError(message) {
+            const box = document.getElementById('errorBox');
+            box.textContent = message;
+            box.classList.add('visible');
+        }
+
+        function clearLoginError() {
+            const box = document.getElementById('errorBox');
+            box.textContent = '';
+            box.classList.remove('visible');
+        }
+
+        async function checkInitialAuth() {
+            authToken = readStoredToken();
+            try {
+                const res = await fetch('/api/auth/me', {
+                    method: 'GET',
+                    headers: getAuthHeaders(),
+                    credentials: 'same-origin'
+                });
+                const data = await res.json().catch(() => ({}));
+                if (data && data.authenticated) {
+                    showAppView();
+                    return;
+                }
+            } catch {
+                // Fall through to login view
+            }
+            saveStoredToken(null);
+            showLoginView();
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            clearLoginError();
+
+            const idInput = document.getElementById('userId');
+            const pwInput = document.getElementById('userPassword');
+            const loginBtn = document.getElementById('loginBtn');
+
+            const id = idInput.value.trim();
+            const password = pwInput.value;
+
+            if (!id || !password) {
+                showLoginError('아이디와 비밀번호를 모두 입력해 주세요.');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '확인 중...';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ id, password })
+                });
+
+                const data = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    showLoginError(data?.error?.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
+                    pwInput.value = '';
+                    pwInput.focus();
+                    return;
+                }
+
+                if (data.token) {
+                    saveStoredToken(data.token);
+                }
+                pwInput.value = '';
+                showAppView();
+            } catch (err) {
+                console.error(err);
+                showLoginError('서버와 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '로그인';
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    credentials: 'same-origin'
+                });
+            } finally {
+                saveStoredToken(null);
+                const responseText = document.getElementById('responseText');
+                const placeholder = document.getElementById('placeholder');
+                if (responseText) responseText.innerText = '';
+                if (placeholder) placeholder.style.display = '';
+                showLoginView();
+            }
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.isComposing) {
+                askGemini();
+            }
+        }
+
+        async function askGemini() {
             const input = document.getElementById('promptInput');
             const container = document.getElementById('responseContainer');
             const responseText = document.getElementById('responseText');
@@ -204,39 +580,101 @@
             const sendBtn = document.getElementById('sendBtn');
 
             const prompt = input.value.trim();
-            if (!prompt) return;
+            if (!prompt || sendBtn.disabled) return;
 
             if (placeholder) placeholder.style.display = 'none';
-            responseText.innerHTML = '<span style="color:#4a6080">🦙 라마가 답변을 준비하는 중입니다<span class="loading-dots">...</span></span>';
+            responseText.innerHTML = '<span style="color:#7c8db5">✨ 제미나이가 답변을 준비하는 중입니다<span class="loading-dots">...</span></span>';
             input.value = '';
             sendBtn.disabled = true;
 
-            // 키보드 포컬ucs1 유지 상태에서 응답역 진행
             try {
-                const response = await fetch(WORKER_URL, {
+                const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+                    credentials: 'same-origin',
                     body: JSON.stringify({ prompt })
                 });
-                const data = await response.json();
 
-                if (data.result && data.result.response) {
-                    responseText.innerText = data.result.response;
-                } else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-                    responseText.innerText = data.candidates[0].content.parts[0].text;
-                } else if (data.error) {
-                    responseText.innerText = `오류: ${data.error.message}`;
+                if (response.status === 401) {
+                    saveStoredToken(null);
+                    showLoginView();
+                    showLoginError('세션이 만료되었습니다. 다시 로그인해 주세요.');
+                    return;
+                }
+
+                const contentType = response.headers.get('content-type') || '';
+
+                if (!response.ok) {
+                    let errorMessage = `오류가 발생했습니다. (HTTP ${response.status})`;
+                    if (contentType.includes('application/json')) {
+                        const errData = await response.json();
+                        if (errData?.error?.message) {
+                            errorMessage = `오류: ${errData.error.message}`;
+                        }
+                    }
+                    responseText.innerText = errorMessage;
+                    return;
+                }
+
+                if (contentType.includes('text/event-stream') && response.body) {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    let buffer = '';
+                    let fullText = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+
+                        for (const line of lines) {
+                            if (!line.startsWith('data: ')) continue;
+                            const payloadStr = line.slice(6).trim();
+                            if (!payloadStr) continue;
+
+                            try {
+                                const payload = JSON.parse(payloadStr);
+                                if (payload.error) {
+                                    responseText.innerText = `오류: ${payload.error}`;
+                                    return;
+                                }
+                                if (payload.text) {
+                                    fullText += payload.text;
+                                    responseText.innerText = fullText;
+                                    container.scrollTop = container.scrollHeight;
+                                }
+                            } catch {
+                                // Ignore malformed partial SSE frames
+                            }
+                        }
+                    }
+
+                    if (!fullText) {
+                        responseText.innerText = '답변을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+                    }
                 } else {
-                    responseText.innerText = '답변을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+                    const data = await response.json();
+                    if (data.text) {
+                        responseText.innerText = data.text;
+                    } else if (data.error?.message) {
+                        responseText.innerText = `오류: ${data.error.message}`;
+                    } else {
+                        responseText.innerText = '답변을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+                    }
                 }
                 container.scrollTop = container.scrollHeight;
             } catch (err) {
                 console.error(err);
-                responseText.innerText = '서버와 연결할 수 없습니다.\nWorker URL을 확인해 주세요.';
+                responseText.innerText = '서버와 연결할 수 없습니다.\n잠시 후 다시 시도해 주세요.';
             } finally {
                 sendBtn.disabled = false;
             }
         }
+
+        checkInitialAuth();
     </script>
 </body>
 </html>
