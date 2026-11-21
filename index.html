@@ -340,9 +340,9 @@
                             name="id"
                             class="login-input"
                             placeholder="아이디를 입력하세요"
-                            autocomplete="username"
+                            autocomplete="off"
                             autocorrect="off"
-                            autocapitalize="off"
+                            autocapitalize="none"
                             spellcheck="false"
                             required
                         >
@@ -358,7 +358,10 @@
                             name="password"
                             class="login-input has-toggle"
                             placeholder="비밀번호를 입력하세요"
-                            autocomplete="current-password"
+                            autocomplete="off"
+                            autocorrect="off"
+                            autocapitalize="none"
+                            spellcheck="false"
                             required
                         >
                         <button type="button" class="toggle-pw" id="togglePwBtn" onclick="togglePassword()" aria-label="비밀번호 표시 전환">보기</button>
@@ -529,9 +532,17 @@
                 const data = await res.json().catch(() => ({}));
 
                 if (!res.ok) {
-                    showLoginError(data?.error?.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
-                    pwInput.value = '';
-                    pwInput.focus();
+                    if (res.status === 404 || res.status === 405) {
+                        showLoginError(
+                            `로그인 서버(/api/auth/login)에 연결할 수 없습니다. (HTTP ${res.status}) GitHub Pages 같은 정적 호스팅이 아닌 Node.js 서버 URL에서 접속해 주세요.`
+                        );
+                    } else if (res.status === 401) {
+                        showLoginError(data?.error?.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
+                        pwInput.value = '';
+                        pwInput.focus();
+                    } else {
+                        showLoginError(data?.error?.message || `로그인 처리 중 오류가 발생했습니다. (HTTP ${res.status})`);
+                    }
                     return;
                 }
 

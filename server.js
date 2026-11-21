@@ -47,7 +47,7 @@ function verifyCredentials(id, password) {
   const { keylen, params, user } = credentialsConfig;
   const idValid = verifyScrypt(id, user.idSalt, user.idHash, keylen, params);
   const pwValid = verifyScrypt(password, user.passwordSalt, user.passwordHash, keylen, params);
-  return idValid && pwValid;
+  return { ok: idValid && pwValid, idValid, pwValid };
 }
 
 function signSessionToken(payloadObj) {
@@ -305,8 +305,8 @@ app.post('/api/auth/login', (req, res) => {
     });
   }
 
-  const id = typeof req.body?.id === 'string' ? req.body.id.trim() : '';
-  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+  const id = typeof req.body?.id === 'string' ? req.body.id.trim().toLowerCase() : '';
+  const password = typeof req.body?.password === 'string' ? req.body.password.trim() : '';
 
   if (!id || !password) {
     return res.status(400).json({
@@ -314,7 +314,9 @@ app.post('/api/auth/login', (req, res) => {
     });
   }
 
-  if (!verifyCredentials(id, password)) {
+  const check = verifyCredentials(id, password);
+  if (!check.ok) {
+    console.warn(`Login failed (idValid=${check.idValid}, pwValid=${check.pwValid})`);
     recordFailedLogin(clientKey);
     return res.status(401).json({
       error: { message: '아이디 또는 비밀번호가 올바르지 않습니다.' },
