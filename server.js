@@ -35,6 +35,52 @@ const LOGIN_WINDOW_MS = 5 * 60 * 1000;
 
 app.use(express.json({ limit: '1mb' }));
 
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  const extraOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (extraOrigins.includes('*') || extraOrigins.includes(origin)) {
+    return true;
+  }
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol === 'https:' && parsed.hostname.endsWith('.github.io')) {
+      return true;
+    }
+    if (parsed.protocol === 'https:' && parsed.hostname.endsWith('.run.app')) {
+      return true;
+    }
+    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && isAllowedOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
+
+app.get('/api/health', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({ ok: true, service: 'gemini-assistant' });
+});
+
 function verifyScrypt(input, salt, expectedHex, keylen, params) {
   if (typeof input !== 'string' || !salt || !expectedHex) return false;
   const derived = crypto.scryptSync(input, salt, keylen, params);

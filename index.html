@@ -170,6 +170,71 @@
             margin-top: 18px;
         }
 
+        /* GitHub Pages 등 정적 호스팅 전용 백엔드 연결 설정 */
+        .backend-box {
+            margin-top: 18px;
+            padding: 12px;
+            border-radius: 12px;
+            background: rgba(77, 166, 255, 0.06);
+            border: 1px solid rgba(77, 166, 255, 0.22);
+        }
+        .backend-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #93c5fd;
+            margin-bottom: 6px;
+        }
+        .backend-desc {
+            font-size: 11px;
+            line-height: 1.5;
+            color: #8494b5;
+            margin-bottom: 10px;
+        }
+        .backend-row {
+            display: flex;
+            gap: 6px;
+        }
+        .backend-input {
+            flex: 1;
+            min-width: 0;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-color);
+            font-size: 13px;
+            padding: 9px 10px;
+            outline: none;
+        }
+        .backend-input:focus {
+            border-color: rgba(77, 166, 255, 0.7);
+        }
+        .backend-save-btn {
+            background: rgba(77, 166, 255, 0.16);
+            color: #bfdbfe;
+            border: 1px solid rgba(77, 166, 255, 0.4);
+            border-radius: 10px;
+            padding: 0 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .backend-save-btn:hover {
+            background: rgba(77, 166, 255, 0.25);
+        }
+        .backend-status {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #9aa7c2;
+            word-break: break-all;
+        }
+        .backend-status.ok {
+            color: #86efac;
+        }
+        .backend-status.err {
+            color: #fca5a5;
+        }
+
         /* 메인 어시스턴트 화면 */
         .app-view {
             width: 100%;
@@ -371,6 +436,28 @@
                 <button type="submit" class="login-submit-btn" id="loginBtn">로그인</button>
             </form>
 
+            <!-- GitHub Pages 등 정적 호스팅에서만 표시되는 백엔드 서버 주소 설정 -->
+            <div id="backendConfigBox" class="backend-box hidden">
+                <div class="backend-title">백엔드 서버 연결 (GitHub Pages 전용)</div>
+                <p class="backend-desc">
+                    GitHub Pages는 정적 파일만 제공하므로, AI Studio에서 <strong>Deploy</strong>로 배포한 서버 URL(<code>https://...run.app</code>)을 한 번 입력해 연결해 주세요.
+                </p>
+                <div class="backend-row">
+                    <input
+                        type="url"
+                        id="backendUrlInput"
+                        class="backend-input"
+                        placeholder="https://your-app.run.app"
+                        autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="none"
+                        spellcheck="false"
+                    >
+                    <button type="button" class="backend-save-btn" id="backendSaveBtn" onclick="saveBackendUrl()">연결</button>
+                </div>
+                <div id="backendStatus" class="backend-status"></div>
+            </div>
+
             <p class="footer-note">Private Access · Protected Session</p>
         </main>
     </section>
@@ -412,9 +499,128 @@
     </section>
 
     <script>
-        const API_URL = '/api/gemini/generate';
+        // AI Studio에서 Deploy로 배포한 고정 백엔드 URL이 있다면 여기에 입력해 두면
+        // GitHub Pages에서도 별도 입력 없이 자동으로 연결됩니다. 예: 'https://your-service.run.app'
+        const DEFAULT_REMOTE_API_URL = '';
         const TOKEN_STORAGE_KEY = 'gemini_assistant_token';
+        const BACKEND_URL_STORAGE_KEY = 'gemini_assistant_backend_url';
         let authToken = null;
+        let backendBaseUrl = '';
+
+        function normalizeBaseUrl(raw) {
+            if (!raw || typeof raw !== 'string') return '';
+            const trimmed = raw.trim().replace(/\/+$/, '');
+            if (!trimmed) return '';
+            try {
+                const parsed = new URL(trimmed);
+                if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return '';
+                return parsed.origin + parsed.pathname.replace(/\/+$/, '');
+            } catch {
+                return '';
+            }
+        }
+
+        function isStaticHost() {
+            const host = window.location.hostname.toLowerCase();
+            return host.endsWith('.github.io') || window.location.protocol === 'file:';
+        }
+
+        function readStoredBackendUrl() {
+            try {
+                return normalizeBaseUrl(localStorage.getItem(BACKEND_URL_STORAGE_KEY) || '');
+            } catch {
+                return '';
+            }
+        }
+
+        function writeStoredBackendUrl(url) {
+            backendBaseUrl = url;
+            try {
+                if (url) {
+                    localStorage.setItem(BACKEND_URL_STORAGE_KEY, url);
+                } else {
+                    localStorage.removeItem(BACKEND_URL_STORAGE_KEY);
+                }
+            } catch {
+                // Ignore storage restrictions
+            }
+        }
+
+        function initBackendBaseUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const paramApi = normalizeBaseUrl(params.get('api') || '');
+            if (paramApi) {
+                writeStoredBackendUrl(paramApi);
+                params.delete('api');
+                const nextQuery = params.toString();
+                const cleanUrl = window.location.pathname + (nextQuery ? `?${nextQuery}` : '') + window.location.hash;
+                window.history.replaceState({}, '', cleanUrl);
+            } else if (isStaticHost()) {
+                backendBaseUrl = readStoredBackendUrl() || normalizeBaseUrl(DEFAULT_REMOTE_API_URL);
+            } else {
+                backendBaseUrl = '';
+            }
+
+            if (isStaticHost()) {
+                const box = document.getElementById('backendConfigBox');
+                const input = document.getElementById('backendUrlInput');
+                const status = document.getElementById('backendStatus');
+                box.classList.remove('hidden');
+                if (backendBaseUrl) {
+                    input.value = backendBaseUrl;
+                    status.textContent = `연결된 서버: ${backendBaseUrl}`;
+                    status.className = 'backend-status ok';
+                } else {
+                    status.textContent = '백엔드 서버 URL을 입력한 뒤 [연결]을 눌러주세요.';
+                    status.className = 'backend-status';
+                }
+            }
+        }
+
+        function apiUrl(path) {
+            return `${backendBaseUrl}${path}`;
+        }
+
+        function getFetchCredentials() {
+            return backendBaseUrl ? 'omit' : 'same-origin';
+        }
+
+        async function saveBackendUrl() {
+            const input = document.getElementById('backendUrlInput');
+            const btn = document.getElementById('backendSaveBtn');
+            const status = document.getElementById('backendStatus');
+            const normalized = normalizeBaseUrl(input.value);
+
+            if (!normalized) {
+                status.textContent = '올바른 https:// 서버 주소를 입력해 주세요.';
+                status.className = 'backend-status err';
+                return;
+            }
+
+            btn.disabled = true;
+            status.textContent = '서버 연결 확인 중...';
+            status.className = 'backend-status';
+
+            try {
+                const res = await fetch(`${normalized}/api/health`, { method: 'GET' });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data?.ok) {
+                    status.textContent = `서버 응답 오류 (HTTP ${res.status}). AI Studio Deploy로 배포된 공개 서버 URL인지 확인해 주세요.`;
+                    status.className = 'backend-status err';
+                    return;
+                }
+                writeStoredBackendUrl(normalized);
+                input.value = normalized;
+                status.textContent = `연결 완료: ${normalized}`;
+                status.className = 'backend-status ok';
+                clearLoginError();
+            } catch {
+                status.textContent = '서버에 연결할 수 없습니다. URL과 배포 상태를 확인해 주세요.';
+                status.className = 'backend-status err';
+            } finally {
+                btn.disabled = false;
+            }
+        }
 
         function readStoredToken() {
             try {
@@ -483,12 +689,19 @@
         }
 
         async function checkInitialAuth() {
+            initBackendBaseUrl();
             authToken = readStoredToken();
+
+            if (isStaticHost() && !backendBaseUrl) {
+                showLoginView();
+                return;
+            }
+
             try {
-                const res = await fetch('/api/auth/me', {
+                const res = await fetch(apiUrl('/api/auth/me'), {
                     method: 'GET',
                     headers: getAuthHeaders(),
-                    credentials: 'same-origin'
+                    credentials: getFetchCredentials()
                 });
                 const data = await res.json().catch(() => ({}));
                 if (data && data.authenticated) {
@@ -506,6 +719,12 @@
             e.preventDefault();
             clearLoginError();
 
+            if (isStaticHost() && !backendBaseUrl) {
+                showLoginError('먼저 아래 [백엔드 서버 연결]에 배포된 서버 URL(https://...run.app)을 입력하고 연결해 주세요.');
+                document.getElementById('backendUrlInput')?.focus();
+                return;
+            }
+
             const idInput = document.getElementById('userId');
             const pwInput = document.getElementById('userPassword');
             const loginBtn = document.getElementById('loginBtn');
@@ -522,10 +741,10 @@
             loginBtn.textContent = '확인 중...';
 
             try {
-                const res = await fetch('/api/auth/login', {
+                const res = await fetch(apiUrl('/api/auth/login'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
+                    credentials: getFetchCredentials(),
                     body: JSON.stringify({ id, password })
                 });
 
@@ -534,7 +753,7 @@
                 if (!res.ok) {
                     if (res.status === 404 || res.status === 405) {
                         showLoginError(
-                            `로그인 서버(/api/auth/login)에 연결할 수 없습니다. (HTTP ${res.status}) GitHub Pages 같은 정적 호스팅이 아닌 Node.js 서버 URL에서 접속해 주세요.`
+                            `로그인 서버에 연결할 수 없습니다. (HTTP ${res.status}) 배포된 백엔드 서버 URL을 확인해 주세요.`
                         );
                     } else if (res.status === 401) {
                         showLoginError(data?.error?.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
@@ -553,7 +772,7 @@
                 showAppView();
             } catch (err) {
                 console.error(err);
-                showLoginError('서버와 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+                showLoginError('백엔드 서버와 연결할 수 없습니다. 서버 URL과 배포 상태를 확인해 주세요.');
             } finally {
                 loginBtn.disabled = false;
                 loginBtn.textContent = '로그인';
@@ -562,10 +781,10 @@
 
         async function handleLogout() {
             try {
-                await fetch('/api/auth/logout', {
+                await fetch(apiUrl('/api/auth/logout'), {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    credentials: 'same-origin'
+                    credentials: getFetchCredentials()
                 });
             } finally {
                 saveStoredToken(null);
@@ -599,10 +818,10 @@
             sendBtn.disabled = true;
 
             try {
-                const response = await fetch(API_URL, {
+                const response = await fetch(apiUrl('/api/gemini/generate'), {
                     method: 'POST',
                     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                    credentials: 'same-origin',
+                    credentials: getFetchCredentials(),
                     body: JSON.stringify({ prompt })
                 });
 
