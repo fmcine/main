@@ -438,16 +438,16 @@
 
             <!-- GitHub Pages 등 정적 호스팅에서만 표시되는 백엔드 서버 주소 설정 -->
             <div id="backendConfigBox" class="backend-box hidden">
-                <div class="backend-title">백엔드 서버 연결 (GitHub Pages 전용)</div>
+                <div class="backend-title">백엔드 서버 연결 (Cloudflare Worker)</div>
                 <p class="backend-desc">
-                    GitHub Pages는 정적 파일만 제공하므로, AI Studio에서 <strong>Deploy</strong>로 배포한 서버 URL(<code>https://...run.app</code>)을 한 번 입력해 연결해 주세요.
+                    GitHub Pages에서는 Cloudflare Worker를 통해 로그인과 Gemini API가 동작합니다. 다른 Worker 주소를 쓰실 경우 아래에 입력 후 연결해 주세요.
                 </p>
                 <div class="backend-row">
                     <input
                         type="url"
                         id="backendUrlInput"
                         class="backend-input"
-                        placeholder="https://your-app.run.app"
+                        placeholder="https://perplexity-proxy.fmcine.workers.dev"
                         autocomplete="off"
                         autocorrect="off"
                         autocapitalize="none"
@@ -499,9 +499,8 @@
     </section>
 
     <script>
-        // AI Studio에서 Deploy로 배포한 고정 백엔드 URL이 있다면 여기에 입력해 두면
-        // GitHub Pages에서도 별도 입력 없이 자동으로 연결됩니다. 예: 'https://your-service.run.app'
-        const DEFAULT_REMOTE_API_URL = '';
+        // GitHub Pages에서 사용할 기본 Cloudflare Worker 백엔드 URL
+        const DEFAULT_REMOTE_API_URL = 'https://perplexity-proxy.fmcine.workers.dev';
         const TOKEN_STORAGE_KEY = 'gemini_assistant_token';
         const BACKEND_URL_STORAGE_KEY = 'gemini_assistant_backend_url';
         let authToken = null;

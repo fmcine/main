@@ -462,6 +462,7 @@ app.get(Array.from(publicAssets), (req, res) => {
 app.use((req, res, next) => {
   if (
     req.path.startsWith('/auth') ||
+    req.path.startsWith('/cloudflare-worker') ||
     req.path.startsWith('/node_modules') ||
     req.path.startsWith('/.env') ||
     req.path === '/server.js' ||
